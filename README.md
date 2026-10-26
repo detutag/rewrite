@@ -35,7 +35,7 @@
 - **風格變化:** 在瀏覽器中比較原文與結果的統計面板(長度、句數與變化度)。
 - **多語介面(8 種語言):** 西班牙文、英文、正體中文、加泰隆尼亞文、法文、德文、義大利文與葡萄牙文,附自製 SVG 旗幟。會記住你選擇的語言。
 - **簡單登入:** 由伺服器端環境變數設定的使用者名稱與密碼(見下方「部署」)。未設定時,應用程式可公開使用,不需要登入。
-- **設計:** 採用 trujillomingorance.com 風格:自架的 Outfit 字型、zinc 與薄荷綠配色,依系統切換淺色或深色。
+- **設計:** 自架的 Outfit 字型、zinc 與薄荷綠配色,依系統切換淺色或深色。
 
 使用前請務必檢查結果。本工具並非用來掩蓋作者身分,也不是為了規避學術規範。
 
@@ -128,7 +128,7 @@ npm test
    - Build output directory:`public`
 4. 在 **Settings → Environment variables**(Production 與 Preview 各設定一次)加入下方變數與 Secret。
 5. 按 **Save and Deploy**。之後每次 push 到 `main` 會部署正式環境,其他分支會產生預覽。
-6. 前往 **Custom domains** 綁定你的網域(例如 `rewrite.trujillomingorance.com`)。
+6. 前往 **Custom domains** 綁定你的網域(例如 `rewrite.example.com`)。
 7. 在 **Settings → Functions → KV namespace bindings** 加入 `BOT_MEMORY`(選用,保留給其他網站共用)。
 8. 若要使用 Workers AI 作最後備援,在 **Settings → Functions → Workers AI bindings** 加入名為 `AI` 的 binding(需先在帳號啟用 Workers AI)。
 
@@ -168,6 +168,6 @@ docs/                banner 與截圖
 
 ## 授權
 
-[MIT](LICENSE) © 2026 Dogbro。Outfit 字型採用 SIL OFL 1.1 授權。
+[MIT](LICENSE) © 2026 detutag。Outfit 字型採用 SIL OFL 1.1 授權。
 
-<p align="center"><sub>© 2026 Dogbro · <a href="https://dogbro.store">Dogbro.store</a></sub></p>
+<p align="center"><sub>© 2026 detutag · <a href="https://github.com/detutag/rewrite">GitHub</a></sub></p>

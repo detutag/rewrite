@@ -1,4 +1,4 @@
-/* Rewrite · sistema visual de trujillomingorance.com (zinc + menta, Inter: baseline ATM) */
+/* Rewrite · sistema visual (zinc + menta, Inter) */
 @font-face { font-family: 'Inter'; font-style: normal; font-weight: 100 900; font-display: swap; src: url('/fonts/inter-latin-wght-normal.woff2') format('woff2'); }
 :root { --font: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; --mono: ui-monospace, "SFMono-Regular", Menlo, monospace; --radius: 16px; --radius-sm: 12px; --ease: cubic-bezier(.22,1,.36,1); --shadow-card: 0 1px 2px 0 rgb(0 0 0 / .04), 0 1px 1px -1px rgb(0 0 0 / .03); }
 html[data-theme="light"] { color-scheme: light; --bg:#FAFAFA; --card:#FFFFFF; --subtle:#F4F4F5; --hover:#F4F4F5; --border:#E4E4E7; --border-strong:#D4D4D8; --text:#18181B; --text-2:#52525B; --muted:#63636B; --accent:#047857; --accent-btn:#047857; --accent-btn-text:#FFFFFF; --accent-soft:#ECFDF5; --header:rgba(250,250,250,.85); --overlay:rgba(9,9,11,.35); --shadow-lift:0 8px 24px -12px rgb(0 0 0 / .18); }
@@ -143,7 +143,7 @@ textarea:focus { outline: none; }
 .version-tab.is-active { background: var(--card); color: var(--text); border-color: var(--accent); }
 
 
-/* ATM Software Labs: shared network footer strip (v1, 2026-10-20).
+/* Shared network footer strip (v1, 2026-10-20).
    Copy this file into each site; it has no runtime dependency on another origin.
    Theme-agnostic: inherits the site's text colour and background (works in light and dark). */
 .atm-net{border-top:1px solid color-mix(in srgb,currentColor 14%,transparent);margin-top:0;padding:18px 0 22px;font-family:var(--atm-font-sans,Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif);font-size:13px;line-height:1.5;text-align:left}

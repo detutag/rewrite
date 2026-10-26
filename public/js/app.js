@@ -1,4 +1,4 @@
-/* Rewrite · ATM Software Labs — interfaz (API externa opcional y acceso con usuario/contraseña) */
+/* Rewrite — interfaz (API externa opcional y acceso con usuario/contraseña) */
 (function () {
   'use strict';
   var T = window.rwT || function (k) { return k; };

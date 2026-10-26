@@ -19,7 +19,7 @@
     "cloudflare-workers",
     "groq-lpu"
   ],
-  "author": "Alberto Trujillo Mingorance <alberto@trujillomingorance.com> (https://trujillomingorance.com)",
+  "author": "detutag (https://github.com/detutag)",
   "license": "MIT",
   "type": "module"
 }

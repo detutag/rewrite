@@ -1,6 +1,6 @@
 # Dependabot: revisión semanal (lunes 07:00 Madrid).
 # Menores y parches en un solo PR por ecosistema; las mayores van en PR aparte.
-# Nada se fusiona solo: Alberto aprueba cada actualización.
+# Nada se fusiona solo: detutag aprueba cada actualización.
 version: 2
 updates:
   - package-ecosystem: npm
