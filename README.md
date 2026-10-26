@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="docs/banner.png" alt="Rewrite — 用你的語言,寫得清楚" width="100%" />
-</p>
+# REWRITE
 
 <p align="center">
   <strong>以 AI 改寫、校對與翻譯文字的編輯器。保留資料、連結與 Markdown 格式。</strong><br/>
@@ -9,12 +7,6 @@
 
 <p align="center">
   <a href="LICENSE">MIT 授權</a>
-</p>
-
-<p align="center">
-  <img alt="MIT 授權" src="https://img.shields.io/badge/license-MIT-10B981" />
-  <img alt="無需建置" src="https://img.shields.io/badge/frontend-HTML%20%2B%20JS%20no%20build-111827" />
-  <img alt="語言" src="https://img.shields.io/badge/UI-8%20languages-047857" />
 </p>
 
 ---
