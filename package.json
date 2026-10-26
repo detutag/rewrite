@@ -1,0 +1,25 @@
+{
+  "name": "rewrite-ai",
+  "version": "1.0.0",
+  "description": "Zero-AI Stealth Text Humanizer & Academic Anti-Plagiarism Engine",
+  "main": "public/index.html",
+  "scripts": {
+    "dev": "npx wrangler pages dev public --compatibility-date=2026-08-16",
+    "deploy": "npx wrangler pages deploy public --project-name=rewrite-ai",
+    "test": "node --test tests/*.test.mjs tests/*.test.js"
+  },
+  "keywords": [
+    "ai-humanizer",
+    "anti-detection",
+    "turnitin-bypass",
+    "zerogpt-bypass",
+    "perplexity",
+    "burstiness",
+    "text-rewriter",
+    "cloudflare-workers",
+    "groq-lpu"
+  ],
+  "author": "Alberto Trujillo Mingorance <alberto@trujillomingorance.com> (https://trujillomingorance.com)",
+  "license": "MIT",
+  "type": "module"
+}

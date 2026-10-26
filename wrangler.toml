@@ -1,0 +1,15 @@
+name = "rewrite-ai"
+pages_build_output_dir = "public"
+compatibility_date = "2026-08-16"
+compatibility_flags = ["nodejs_compat"]
+
+[ai]
+binding = "AI"
+
+[[kv_namespaces]]
+binding = "BOT_MEMORY"
+id = "bab271312bfa4c84a483c6ee7b7a1756"
+
+[vars]
+ENVIRONMENT = "production"
+DEFAULT_MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8"

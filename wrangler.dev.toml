@@ -1,0 +1,15 @@
+# Configuración solo para desarrollo local.
+# Omite el binding remoto de Workers AI para poder arrancar sin cuenta de Cloudflare.
+# La API externa configurable en la interfaz no necesita Workers AI.
+name = "rewrite-ai"
+pages_build_output_dir = "public"
+compatibility_date = "2026-08-16"
+compatibility_flags = ["nodejs_compat"]
+
+[[kv_namespaces]]
+binding = "BOT_MEMORY"
+id = "bab271312bfa4c84a483c6ee7b7a1756"
+
+[vars]
+ENVIRONMENT = "development"
+DEFAULT_MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8"
