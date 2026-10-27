@@ -18,7 +18,7 @@ a:visited { color: var(--accent); }
 .topbar { position: sticky; top: 0; z-index: 40; background: var(--header); backdrop-filter: saturate(1.4) blur(12px); -webkit-backdrop-filter: saturate(1.4) blur(12px); border-bottom: 1px solid var(--border); }
 .topbar-inner { max-width: 1120px; margin: 0 auto; height: 56px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text) !important; font-weight: 600; font-size: .9rem; letter-spacing: .02em; }
-.brand-logo { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--border); background: #000; }
+.brand-logo { width: 28px; height: 28px; border-radius: 22%; border: 1px solid var(--border); background: transparent; }
 .topbar-actions { display: flex; align-items: center; gap: 8px; }
 .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--text-2); cursor: pointer; transition: background .15s, color .15s; }
 .icon-btn:hover { background: var(--hover); color: var(--text); }
@@ -80,7 +80,7 @@ textarea:focus { outline: none; }
 .modal-card { position: relative; width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow-lift); padding: 28px 24px 22px; }
 .auth-card { text-align: center; display: flex; flex-direction: column; gap: 10px; }
 .auth-card h2 { margin: 4px 0 0; font-size: 1.35rem; font-weight: 650; }
-.auth-logo { margin: 0 auto; border-radius: 12px; background: #000; border: 1px solid var(--border); }
+.auth-logo { margin: 0 auto; border-radius: 22%; background: transparent; border: 1px solid var(--border); }
 .muted { color: var(--text-2); margin: 0 0 8px; font-size: .92rem; }
 .fine { color: var(--muted); font-size: .78rem; margin: 6px 0 0; }
 .modal-x { position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; }
