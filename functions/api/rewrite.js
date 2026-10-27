@@ -8,6 +8,7 @@
 import { corsFor, guard, tooLong, MAX_CHARS } from '../lib/guard.js';
 import { BANNED_PHRASES_ES, BANNED_PHRASES_EN, sanitizeText } from '../lib/aiDictionary.js';
 import { normalizeBaseUrl, chatCompletion } from '../lib/customApi.js';
+import { detectLanguage, languageName, isCJK } from '../lib/lang.js';
 
 const BANNED_AI_WORDS_EN = BANNED_PHRASES_EN;
 const BANNED_AI_WORDS_ES = BANNED_PHRASES_ES;
@@ -32,35 +33,27 @@ function groqReasoningOpts(model, maxTokens) {
 }
 
 
-function detectTextLanguage(text) {
-  if (!text) return 'es';
-  const sample = text.toLowerCase();
-  
-  const enWords = [
-    'the', 'and', 'is', 'of', 'to', 'in', 'with', 'for', 'on', 'by', 'this', 'that', 
-    'from', 'at', 'an', 'as', 'are', 'be', 'system', 'buffer', 'alerts', 'lockdown', 
-    'local', 'data', 'user', 'project', 'repo', 'description', 'released', 'license',
-    'strictly', 'forensic', 'workstation', 'overload', 'under', 'boot', 'ring'
-  ];
-  const esWords = [
-    'el', 'la', 'los', 'las', 'de', 'en', 'que', 'un', 'una', 'para', 'por', 'con', 
-    'del', 'al', 'es', 'su', 'este', 'esta', 'como', 'más', 'pero', 'sistema', 
-    'descripción', 'enlace', 'almacenado', 'pantalla', 'seguridad', 'informe'
-  ];
+// Instrucción de idioma que se añade al prompt: el idioma detectado solo
+// refuerza la regla; el texto original manda si la detección falla ('und').
+function languageDirective(lang) {
+  return '\n\nLANGUAGE LOCK (HIGHEST PRIORITY): Write the entire response in ' + languageName(lang) + '. ' +
+    'Keep the EXACT same language as the input text. This is a rewrite, not a translation. ' +
+    'Do NOT switch language for any reason.';
+}
 
-  let enCount = 0;
-  let esCount = 0;
+// Cuenta "palabras" útiles también en idiomas sin espacios.
+function effectiveWordCount(text) {
+  if (isCJK(text)) return Math.ceil(text.replace(/\s/g, '').length / 1.8);
+  return text.replace(/[*#>_`-]+/g, ' ').trim().split(/\s+/).filter(Boolean).length;
+}
 
-  const tokens = sample.split(/[\s,.;:!?()\[\]"']+/).filter(Boolean);
-  for (const t of tokens) {
-    if (enWords.includes(t)) enCount++;
-    if (esWords.includes(t)) esCount++;
-  }
-
-  if (enCount > esCount) return 'en';
-  if (esCount > enCount) return 'es';
-  if (/[áéíóúüñ¿¡]/.test(sample)) return 'es';
-  return 'es';
+// Tope de tokens proporcional al contenido. En CJK se estima por caracteres.
+function estimateMaxTokens(text, mode) {
+  if (mode !== 'stealth') return 3500;
+  const base = isCJK(text)
+    ? Math.ceil(text.length * 1.3)
+    : Math.ceil(effectiveWordCount(text) * 2.0 * 1.2);
+  return Math.min(6000, Math.max(400, base + 120));
 }
 
 export async function onRequestPost(context) {
@@ -122,17 +115,16 @@ export async function onRequestPost(context) {
     }
     const customModel = model || 'gpt-4o-mini';
 
-    const detectedLang = language === 'auto' ? detectTextLanguage(text) : language;
+    const detectedLang = language === 'auto' ? detectLanguage(text) : language;
     const isEnglish = detectedLang === 'en';
 
     const { systemPrompt, userPrompt } = mode === 'translate'
       ? buildTranslatePrompts(text, targetLang)
-      : buildPrompts(mode, stylePreset, isEnglish, text, styleGuide, calibration);
-    const wordCount = text.trim().split(/\s+/).length;
+      : buildPrompts(mode, stylePreset, detectedLang, text, styleGuide, calibration);
+    const wordCount = effectiveWordCount(text);
     // Modelo rápido (8B) para correcciones cortas; 70B para reescribir y traducir
     const cfModel = (mode === 'corrector' && wordCount <= 300) ? '@cf/meta/llama-3.1-8b-instruct-fast' : (env.DEFAULT_MODEL || '@cf/meta/llama-3.1-8b-instruct-fp8');
-    // Tope de tokens proporcional al texto (≈2 tokens por palabra +20 % de margen) para que Reescribir no se alargue
-    const maxTokens = mode === 'stealth' ? Math.min(3500, Math.max(160, Math.ceil(wordCount * 2.0 * 1.2) + 40)) : 3500;
+    const maxTokens = estimateMaxTokens(text, mode);
     const temperature = mode === 'corrector' ? 0.3 : mode === 'translate' ? 0.4 : 0.88;
 
     const effectiveGroqKey = (provider === 'groq' ? apiKey : '') || env.GROQ_API_KEY || '';
@@ -174,14 +166,16 @@ export async function onRequestPost(context) {
         const msgs = [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }];
         const aiStream = await env.AI.run(cfModel, { messages: msgs, temperature, top_p: 0.95, max_tokens: maxTokens, stream: true });
         // Reescribir: solo si sale anormalmente truncado (<40 % de palabras), se regenera una vez
-        const inWords = text.replace(/[*#>_`-]+/g, ' ').trim().split(/\s+/).filter(Boolean).length;
+        const inWords = wordCount;
         const lengthCheck = mode === 'stealth' && stylePreset !== 'executive' && inWords >= 40;
         const retry = lengthCheck ? async (got) => {
           const targetWords = Math.round(inWords * 0.75);
-          const fix = isEnglish
-            ? 'Your version has only ' + got + ' words and was cut off. Rewrite the ORIGINAL text completely in around ' + targetWords + ' words, keeping all facts, figures, and key ideas in a natural, concise human voice. Return only the text.'
-            : 'Tu versión tiene solo ' + got + ' palabras y quedó incompleta. Vuelve a reescribir el texto ORIGINAL completo en unas ' + targetWords + ' palabras, conservando todos los datos, cifras e ideas clave de forma natural, concisa y humana. Devuelve solo el texto.';
-          return env.AI.run(cfModel, { messages: msgs.concat([{ role: 'user', content: fix }]), temperature: 0.7, top_p: 0.95, max_tokens: Math.min(3500, Math.ceil(inWords * 2.0) + 60), stream: true });
+          const unit = isCJK(text) ? 'characters' : 'words';
+          const unitEs = isCJK(text) ? 'caracteres' : 'palabras';
+          const fix = detectedLang === 'es'
+            ? 'Tu versión tiene solo ' + got + ' ' + unitEs + ' y quedó incompleta. Vuelve a reescribir el texto ORIGINAL completo en unas ' + targetWords + ' ' + unitEs + ', conservando todos los datos, cifras e ideas clave de forma natural, concisa y humana. Devuelve solo el texto.'
+            : 'Your version has only ' + got + ' ' + unit + ' and was cut off. Rewrite the ORIGINAL text completely in around ' + targetWords + ' ' + unit + ', keeping all facts, figures, and key ideas in a natural, concise human voice. Return only the text.' + languageDirective(detectedLang);
+          return env.AI.run(cfModel, { messages: msgs.concat([{ role: 'user', content: fix }]), temperature: 0.7, top_p: 0.95, max_tokens: Math.min(6000, Math.ceil(inWords * 2.0) + 60), stream: true });
         } : null;
         return new Response(workersAiToSse(aiStream, cfModel, retry ? { minWords: Math.round(inWords * 0.40), retry } : null, isEnglish), {
           headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-store', 'X-Accel-Buffering': 'no', ...corsFor(request, {}, env) }
@@ -719,11 +713,14 @@ function calculateMetrics(text) {
     return { wordCount: 0, charCount: 0, burstiness: 0, clichéCount: 0 };
   }
 
-  const words = text.trim().split(/\s+/);
-  const sentences = text.split(/[.!?]+/).map(s => s.trim()).filter(Boolean);
+  const cjk = isCJK(text);
+  const words = cjk ? [] : text.trim().split(/\s+/).filter(Boolean);
+  const sentences = text.split(/[.!?。!?;;]+/).map(s => s.trim()).filter(Boolean);
 
-  let sentenceLengths = sentences.map(s => s.split(/\s+/).length);
-  if (sentenceLengths.length === 0) sentenceLengths = [words.length];
+  let sentenceLengths = sentences.map(s => cjk
+    ? Math.ceil(s.replace(/\s/g, '').length / 1.8)
+    : s.split(/\s+/).filter(Boolean).length);
+  if (sentenceLengths.length === 0) sentenceLengths = [cjk ? Math.ceil(text.length / 1.8) : words.length];
 
   const avgLength = sentenceLengths.reduce((a, b) => a + b, 0) / sentenceLengths.length;
   const variance = sentenceLengths.reduce((a, b) => a + Math.pow(b - avgLength, 2), 0) / sentenceLengths.length;
@@ -740,7 +737,7 @@ function calculateMetrics(text) {
   }
 
   return {
-    wordCount: words.length,
+    wordCount: cjk ? Math.ceil(text.replace(/\s/g, '').length / 1.8) : words.length,
     charCount: text.length,
     burstiness,
     clichéCount
@@ -762,12 +759,27 @@ const STYLES_EN = {
   executive: 'High-impact executive summary: condense key takeaways into 2-3 short paragraphs focusing on conclusions and hard facts (at most 120 words).',
 };
 
-function buildPrompts(mode, preset, isEnglish, text, styleGuide, calibration) {
-  const wc = text.replace(/[*#>_`-]+/g, ' ').trim().split(/\s+/).filter(Boolean).length;
+function buildPrompts(mode, preset, lang, text, styleGuide, calibration) {
+  const wc = effectiveWordCount(text);
+  const cjk = isCJK(text);
+  const chars = text.length;
   const extra = typeof buildStyleBlock === 'function' ? buildStyleBlock(styleGuide, calibration) : '';
-  if (isEnglish) {
+  const langLock = languageDirective(lang);
+
+  const lengthEn = preset === 'executive'
+    ? (cjk ? 'Keep it under about 200 characters.' : 'At most 120 words.')
+    : (cjk
+      ? 'Around ' + Math.round(chars * 0.70) + '-' + Math.round(chars * 0.85) + ' characters (the original has ' + chars + '), concise and fluff-free.'
+      : 'Around ' + Math.round(wc * 0.70) + '-' + Math.round(wc * 0.85) + ' words (original has ' + wc + '), punchy and fluff-free.');
+  const lengthEs = preset === 'executive'
+    ? (cjk ? 'Máximo unas 200 letras.' : 'Máximo 120 palabras.')
+    : (cjk
+      ? 'Alrededor de ' + Math.round(chars * 0.70) + '-' + Math.round(chars * 0.85) + ' caracteres (el original tiene ' + chars + '), conciso y sin relleno.'
+      : 'Alrededor de ' + Math.round(wc * 0.70) + '-' + Math.round(wc * 0.85) + ' palabras (el original tiene ' + wc + '), conciso y sin relleno.');
+
+  if (lang !== 'es') {
     if (mode === 'corrector') return {
-      systemPrompt: 'You are a meticulous copy editor. Fix spelling, grammar, punctuation and awkward phrasing. Keep the author\'s wording, order and structure (paragraphs, headings as their own lines, list items as their own lines). Remove Markdown symbols (**, __, #, *, -, ---, >) but keep the line structure; a list item becomes a line starting with a dash-free sentence. Keep facts, numbers and names exactly. Output only the corrected text, no preface.' + extra,
+      systemPrompt: 'You are a meticulous copy editor. Fix spelling, grammar, punctuation and awkward phrasing. Keep the author\'s wording, order and structure (paragraphs, headings as their own lines, list items as their own lines). Remove Markdown symbols (**, __, #, *, -, ---, >) but keep the line structure; a list item becomes a line starting with a dash-free sentence. Keep facts, numbers and names exactly. Output only the corrected text, no preface.' + langLock + extra,
       userPrompt: 'Correct this text:\n\n' + text,
     };
     return {
@@ -780,12 +792,12 @@ function buildPrompts(mode, preset, isEnglish, text, styleGuide, calibration) {
         '5. BANNED AI CLICHES: Strictly forbidden: "delve", "tapestry", "testament", "beacon", "crucial", "paramount", "realm", "moreover", "furthermore", "in conclusion", "it is worth noting", "in today\'s world", "not only... but also", "plays a pivotal role", "seamless", "holistic", "navigating the landscape".\n' +
         '6. ORGANIC HUMAN VOICE: Write like an insightful human talking to another with clarity and sharp substance. Alternate brief 4-7 word punchy statements with smooth explanations. Use real human connectors (yet, but, however, so, in fact, still).\n' +
         '7. CONCISE & PUNCHY: Keep it tighter and more condensed (around 70% to 85% of original length), preserving all hard facts, figures, and names.\n' +
-        '8. Output only the rewritten prose in clean paragraphs, with no title, preface, quotes, or commentary.' + extra,
+        '8. Output only the rewritten prose in clean paragraphs, with no title, preface, quotes, or commentary.' + langLock + extra,
       userPrompt: 'Thoroughly rewrite the text between <text> and </text> so it reads 100% human and natural, breaking all AI syntactic predictability:\n' +
         '1. Total restructure: Do not mirror the original sentence blueprint. Explain the core message with fresh phrasing and new sentence starts. Never begin the first sentence like the source.\n' +
         '2. Zero AI signatures: No semicolons (;), no air quotes, and no formulaic clauses like ", which protects/allows...".\n' +
         '3. No clichés: Avoid "delve", "tapestry", "crucial", "furthermore", "in conclusion", "in today\'s world". Keep all figures and names intact.\n' +
-        '4. Conciseness: ' + (preset === 'executive' ? 'At most 120 words.' : 'Around ' + Math.round(wc * 0.70) + '-' + Math.round(wc * 0.85) + ' words (original has ' + wc + '), punchy and fluff-free.') + '\n' +
+        '4. Conciseness: ' + lengthEn + '\n' +
         '5. ' + (STYLES_EN[preset] || STYLES_EN.natural) + '\n\n<text>\n' + text + '\n</text>',
     };
   }
@@ -808,7 +820,7 @@ function buildPrompts(mode, preset, isEnglish, text, styleGuide, calibration) {
       '1. Reestructuración total: No sigas el orden ni la sintaxis del original. Explica la misma idea con otra estructura y vocabulario propio. La primera frase debe empezar de forma distinta.\n' +
       '2. Cero firmas de IA: Prohibido usar punto y coma (;), comillas en palabras sueltas, o coletillas como ", lo que protege/permite...".\n' +
       '3. Sin clichés: No uses "desglose", "vaivenes", "cabe destacar", "es fundamental", "en resumen", "en conclusión", "a día de hoy", "no solo... sino también".\n' +
-      '4. Síntesis: ' + (preset === 'executive' ? 'Máximo 120 palabras.' : 'Alrededor de ' + Math.round(wc * 0.70) + '-' + Math.round(wc * 0.85) + ' palabras (el original tiene ' + wc + '), conciso y sin relleno.') + '\n' +
+      '4. Síntesis: ' + lengthEs + '\n' +
       '5. ' + (STYLES_ES[preset] || STYLES_ES.natural) + '\n\n<texto>\n' + text + '\n</texto>',
   };
 }

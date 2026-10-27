@@ -1,5 +1,6 @@
 import { corsFor, guard, tooLong, MAX_CHARS } from '../lib/guard.js';
 import { normalizeBaseUrl, chatCompletion } from '../lib/customApi.js';
+import { detectLanguage, languageName } from '../lib/lang.js';
 /**
  * Cloudflare Pages Function: /api/tools
  * Motores especializados de auditoría y optimización de texto
@@ -165,9 +166,15 @@ export async function onRequestPost(context) {
     }
 
     const tool = TOOL_DEFINITIONS[action];
-    const systemPrompt = typeof tool.systemPrompt === 'function'
+    const detectedLang = detectLanguage(text);
+    let systemPrompt = typeof tool.systemPrompt === 'function'
       ? tool.systemPrompt({ targetLanguage })
       : tool.systemPrompt;
+    if (action !== 'translate') {
+      systemPrompt += '\n\nIDIOMA DE SALIDA (PRIORIDAD MÁXIMA): Escribe todos los valores de texto en ' +
+        languageName(detectedLang, 'es') + ', el mismo idioma que el texto de entrada. ' +
+        'Esto NO es una traducción: no cambies de idioma. Mantén las claves JSON exactamente como se especifican.';
+    }
     const userPrompt = tool.buildUserPrompt(text);
 
     const groqKey = request.headers.get('x-groq-user-key') || env.GROQ_API_KEY;
