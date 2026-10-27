@@ -45,20 +45,20 @@
 
 ```mermaid
 flowchart LR
+  U["User"]
   subgraph Cloudflare
-    P["Pages<br/>HTML · CSS · JS"]
-    F["Functions /api/*<br/>origin · size · rate"]
-    AI["Workers AI (last resort)<br/>Llama 3.1 8B"]
+    P["Pages HTML CSS JS"]
+    F["Functions /api/*"]
+    AI["Workers AI Llama 3.1 8B"]
   end
-  G["Groq (primary)<br/>GPT-OSS 120B · 20B · Qwen3"]
-  X["External API (optional)<br/>OpenAI-compatible"]
-
+  G["Groq GPT-OSS 120B 20B Qwen3"]
+  X["External API OpenAI-compatible"]
   U -->|static| P
-  U -->|/api/rewrite (SSE)| F
-  U -->|/api/tools| F
-  F -->|GROQ_API_KEY| G
-  F -->|user Base URL + key| X
-  F -.->|if Groq fails| AI
+  U -->|"/api/rewrite SSE"| F
+  U -->|"/api/tools"| F
+  F -->|"GROQ_API_KEY"| G
+  F -->|"user Base URL + key"| X
+  F -.->|"if Groq fails"| AI
 ```
 
 | 路由 | 用途 |
